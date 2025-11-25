@@ -1,0 +1,108 @@
+<html>
+<head>
+<title>ProyectoRiego.scala</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #808080;}
+.s3 { color: #6897bb;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+ProyectoRiego.scala</font>
+</center></td></tr></table>
+<pre><span class="s0">package </span><span class="s1">proyecto.riego</span>
+
+<span class="s0">import </span><span class="s1">scala.util.Random</span>
+<span class="s0">import </span><span class="s1">scala.collection.immutable.Vector</span>
+
+<span class="s0">object </span><span class="s1">ProyectoRiego {</span>
+
+  <span class="s2">// Tipos</span>
+  <span class="s0">type </span><span class="s1">Tablon = (Int</span><span class="s0">, </span><span class="s1">Int</span><span class="s0">, </span><span class="s1">Int)           </span><span class="s2">// (tsup, treg, prio)</span>
+  <span class="s0">type </span><span class="s1">Finca = Vector[Tablon]</span>
+  <span class="s0">type </span><span class="s1">Distancia = Vector[Vector[Int]]</span>
+  <span class="s0">type </span><span class="s1">ProgRiego = Vector[Int]</span>
+  <span class="s0">type </span><span class="s1">TiempoInicioRiego = Vector[Int]</span>
+
+  <span class="s0">private val </span><span class="s1">random = </span><span class="s0">new </span><span class="s1">Random()</span>
+
+  <span class="s2">// ----------- Generación aleatoria -----------</span>
+
+  <span class="s0">def </span><span class="s1">fincaAlAzar(long: Int): Finca = {</span>
+    <span class="s1">Vector.fill(long)(</span>
+      <span class="s1">(random.nextInt(long * </span><span class="s3">2</span><span class="s1">) + </span><span class="s3">1</span><span class="s0">,</span>
+        <span class="s1">random.nextInt(long) + </span><span class="s3">1</span><span class="s0">,</span>
+        <span class="s1">random.nextInt(</span><span class="s3">4</span><span class="s1">) + </span><span class="s3">1</span><span class="s1">)</span>
+    <span class="s1">)</span>
+  <span class="s1">}</span>
+
+  <span class="s0">def </span><span class="s1">distanciaAlAzar(long: Int): Distancia = {</span>
+    <span class="s0">val </span><span class="s1">raw = Vector.fill(long</span><span class="s0">, </span><span class="s1">long)(random.nextInt(long * </span><span class="s3">3</span><span class="s1">) + </span><span class="s3">1</span><span class="s1">)</span>
+    <span class="s1">Vector.tabulate(long</span><span class="s0">, </span><span class="s1">long) { (i</span><span class="s0">, </span><span class="s1">j) =&gt;</span>
+      <span class="s0">if </span><span class="s1">(i &lt; j) raw(i)(j)</span>
+      <span class="s0">else if </span><span class="s1">(i == j) </span><span class="s3">0</span>
+      <span class="s0">else </span><span class="s1">raw(j)(i)</span>
+    <span class="s1">}</span>
+  <span class="s1">}</span>
+
+  <span class="s2">// ----------- Exploración -----------</span>
+
+  <span class="s0">def </span><span class="s1">tsup(f: Finca</span><span class="s0">, </span><span class="s1">i: Int): Int = f(i)._1</span>
+  <span class="s0">def </span><span class="s1">treg(f: Finca</span><span class="s0">, </span><span class="s1">i: Int): Int = f(i)._2</span>
+  <span class="s0">def </span><span class="s1">prio(f: Finca</span><span class="s0">, </span><span class="s1">i: Int): Int = f(i)._3</span>
+
+  <span class="s2">// ----------- tIR -----------</span>
+
+  <span class="s0">def </span><span class="s1">tIR(f: Finca</span><span class="s0">, </span><span class="s1">pi: ProgRiego): TiempoInicioRiego = {</span>
+    <span class="s0">val </span><span class="s1">n = f.length</span>
+    <span class="s0">val </span><span class="s1">permTurno = Vector.tabulate(n)(j =&gt; pi.indexOf(j))</span>
+
+    <span class="s0">def </span><span class="s1">acum(j: Int): Vector[Int] = {</span>
+      <span class="s0">if </span><span class="s1">(j == </span><span class="s3">0</span><span class="s1">) Vector(</span><span class="s3">0</span><span class="s1">)</span>
+      <span class="s0">else </span><span class="s1">{</span>
+        <span class="s0">val </span><span class="s1">prev = acum(j - </span><span class="s3">1</span><span class="s1">)</span>
+        <span class="s0">val </span><span class="s1">prevStart = prev.last</span>
+        <span class="s0">val </span><span class="s1">prevTablon = permTurno(j - </span><span class="s3">1</span><span class="s1">)</span>
+        <span class="s1">prev :+ (prevStart + treg(f</span><span class="s0">, </span><span class="s1">prevTablon))</span>
+      <span class="s1">}</span>
+    <span class="s1">}</span>
+
+    <span class="s0">val </span><span class="s1">starts = acum(n - </span><span class="s3">1</span><span class="s1">)</span>
+    <span class="s1">Vector.tabulate(n)(i =&gt; starts(pi(i)))</span>
+  <span class="s1">}</span>
+
+  <span class="s2">// ----------- Costos -----------</span>
+
+  <span class="s0">def </span><span class="s1">costoRiegoTablon(i: Int</span><span class="s0">, </span><span class="s1">f: Finca</span><span class="s0">, </span><span class="s1">pi: ProgRiego): Int = {</span>
+    <span class="s0">val </span><span class="s1">t = tIR(f</span><span class="s0">, </span><span class="s1">pi)(i)</span>
+    <span class="s0">val </span><span class="s1">tsi = tsup(f</span><span class="s0">, </span><span class="s1">i)</span>
+    <span class="s0">val </span><span class="s1">tri = treg(f</span><span class="s0">, </span><span class="s1">i)</span>
+    <span class="s0">val </span><span class="s1">pr = prio(f</span><span class="s0">, </span><span class="s1">i)</span>
+
+    <span class="s0">if </span><span class="s1">(tsi - tri &gt;= t)</span>
+      <span class="s1">tsi - (t + tri)</span>
+    <span class="s0">else</span>
+      <span class="s1">pr * ((t + tri) - tsi)</span>
+  <span class="s1">}</span>
+
+  <span class="s0">def </span><span class="s1">costoRiegoFinca(f: Finca</span><span class="s0">, </span><span class="s1">pi: ProgRiego): Int = {</span>
+    <span class="s0">def </span><span class="s1">aux(i: Int): Int =</span>
+      <span class="s0">if </span><span class="s1">(i &gt;= f.length) </span><span class="s3">0</span>
+      <span class="s0">else </span><span class="s1">costoRiegoTablon(i</span><span class="s0">, </span><span class="s1">f</span><span class="s0">, </span><span class="s1">pi) + aux(i + </span><span class="s3">1</span><span class="s1">)</span>
+    <span class="s1">aux(</span><span class="s3">0</span><span class="s1">)</span>
+  <span class="s1">}</span>
+
+  <span class="s0">def </span><span class="s1">costoMovilidad(f: Finca</span><span class="s0">, </span><span class="s1">pi: ProgRiego</span><span class="s0">, </span><span class="s1">d: Distancia): Int = {</span>
+    <span class="s0">val </span><span class="s1">n = f.length</span>
+    <span class="s0">val </span><span class="s1">permTurno = Vector.tabulate(n)(j =&gt; pi.indexOf(j))</span>
+
+    <span class="s0">def </span><span class="s1">aux(j: Int): Int =</span>
+      <span class="s0">if </span><span class="s1">(j &gt;= n - </span><span class="s3">1</span>
+</pre>
+</body>
+</html>
