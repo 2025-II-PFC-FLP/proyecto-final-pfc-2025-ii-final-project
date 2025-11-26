@@ -141,4 +141,49 @@ object ProyectoRiego {
     }
   }
 
+
+  // PARTE INTEGRANTE 2: Generación de Permutaciones y Óptimo Secuencial
+  /**
+   * 2.5. Generando programaciones de riego
+   * Genera todas las posibles permutaciones de riego para una finca f.
+   * Estrategia: Recursión para generar permutaciones de índices 0 a n-1.
+   */
+  def generarProgramacionesRiego(f: Finca): Vector[ProgRiego] = {
+    val n = f.length
+    val indices = Vector.range(0, n)
+
+    // Función auxiliar
+    def permutar(lista: Vector[Int]): Vector[Vector[Int]] = {
+      if (lista.isEmpty) Vector(Vector())
+      else {
+        // Para cada elemento, lo fijamos y permutamos el resto
+        lista.flatMap { elem =>
+          permutar(lista.filter(_ != elem)).map(p => elem +: p)
+        }
+      }
+    }
+    permutar(indices)
+  }
+
+  /**
+   * 2.6. Calculando una programación de riego óptima
+   * Devuelve la programación que minimiza (Costo Riego + Costo Movilidad).
+   */
+  def ProgramacionRiegoOptimo(f: Finca, d: Distancia): (ProgRiego, Int) = {
+    // aqui obtenemos todas las programaciones posibles
+    val programaciones = generarProgramacionesRiego(f)
+
+    def calcularCostoTotal(pi: ProgRiego): Int = {
+      val cRiego = costoRiegoFinca(f, pi)
+      val cMovilidad = costoMovilidad(f, pi, d)
+      cRiego + cMovilidad
+    }
+
+    // buscamos el minimo para asi comparar los costos.
+    val mejorProgramacion = programaciones.minBy(pi => calcularCostoTotal(pi))
+    val mejorCosto = calcularCostoTotal(mejorProgramacion)
+
+    (mejorProgramacion, mejorCosto)
+  }
+
 }
