@@ -1,6 +1,7 @@
 package taller
 
 import scala.util.Random
+import scala.collection.parallel.CollectionConverters._
 
 object ProyectoRiego {
 
@@ -91,7 +92,7 @@ object ProyectoRiego {
     loop(0, 0, Vector.fill(n)(0))
   }
 
-  // ---------- 4. Cálculo de costos ----------
+  // ---------- 4. Cálculo de costos (versión secuencial) ----------
 
   /** Costo de riego de un tablón i de la finca f bajo la programación pi.
    *
@@ -115,7 +116,7 @@ object ProyectoRiego {
     }
   }
 
-  /** Costo total de riego de la finca f con programación pi. */
+  /** Costo total de riego de la finca f con programación pi. (secuencial) */
   def costoRiegoFinca(f: Finca, pi: ProgRiego): Int = {
     val n = f.length
     (0 until n).foldLeft(0) { (acum, i) =>
@@ -123,7 +124,7 @@ object ProyectoRiego {
     }
   }
 
-  /** Costo de movilidad del sistema de riego según pi y la matriz de distancias d.
+  /** Costo de movilidad del sistema de riego según pi y la matriz de distancias d. (secuencial)
    *
    * CM = Σ_{j=0}^{n-2} d[pi(j), pi(j+1)]
    */
@@ -142,9 +143,30 @@ object ProyectoRiego {
   }
 
 
-  // PARTE INTEGRANTE 2: Generación de Permutaciones y Óptimo Secuencial
+  /** Costo total de riego de la finca f con programación pi, usando colecciones paralelas. */
+  def costoRiegoFincaPar(f: Finca, pi: ProgRiego): Int = {
+    val n = f.length
+    // Paralelizamos la suma de costos por tablón
+    (0 until n).par.map(i => costoRiegoTablon(i, f, pi)).sum
+  }
+
+  /** Costo de movilidad en versión paralela. */
+  def costoMovilidadPar(f: Finca, pi: ProgRiego, d: Distancia): Int = {
+    require(d.length == f.length && d.forall(_.length == f.length),
+      "La matriz de distancias debe ser del mismo tamaño que la finca")
+
+    if (pi.length <= 1) 0
+    else {
+      (0 until (pi.length - 1)).par.map { j =>
+        val from = pi(j)
+        val to   = pi(j + 1)
+        d(from)(to)
+      }.sum
+    }
+  }
+
+
   /**
-   * 2.5. Generando programaciones de riego
    * Genera todas las posibles permutaciones de riego para una finca f.
    * Estrategia: Recursión para generar permutaciones de índices 0 a n-1.
    */
@@ -170,7 +192,7 @@ object ProyectoRiego {
    * Devuelve la programación que minimiza (Costo Riego + Costo Movilidad).
    */
   def ProgramacionRiegoOptimo(f: Finca, d: Distancia): (ProgRiego, Int) = {
-    // aqui obtenemos todas las programaciones posibles
+    // obtenemos todas las programaciones posibles
     val programaciones = generarProgramacionesRiego(f)
 
     def calcularCostoTotal(pi: ProgRiego): Int = {
@@ -179,7 +201,7 @@ object ProyectoRiego {
       cRiego + cMovilidad
     }
 
-    // buscamos el minimo para asi comparar los costos.
+    // buscamos el mínimo para comparar los costos.
     val mejorProgramacion = programaciones.minBy(pi => calcularCostoTotal(pi))
     val mejorCosto = calcularCostoTotal(mejorProgramacion)
 
