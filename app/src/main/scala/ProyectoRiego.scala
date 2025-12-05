@@ -165,10 +165,8 @@ object ProyectoRiego {
     }
   }
 
-
   /**
    * Genera todas las posibles permutaciones de riego para una finca f.
-   * Estrategia: Recursión para generar permutaciones de índices 0 a n-1.
    */
   def generarProgramacionesRiego(f: Finca): Vector[ProgRiego] = {
     val n = f.length
@@ -188,7 +186,6 @@ object ProyectoRiego {
   }
 
   /**
-   * 2.6. Calculando una programación de riego óptima
    * Devuelve la programación que minimiza (Costo Riego + Costo Movilidad).
    */
   def ProgramacionRiegoOptimo(f: Finca, d: Distancia): (ProgRiego, Int) = {
@@ -208,4 +205,45 @@ object ProyectoRiego {
     (mejorProgramacion, mejorCosto)
   }
 
+  /** Genera todas las posibles programaciones de riego usando paralelismo */
+  def generarProgramacionesRiegoPar(f: Finca): Vector[ProgRiego] = {
+    val n = f.length
+    val indices = Vector.range(0, n)
+
+    // Función recursiva para generar permutaciones (igual a la secuencial)
+    def permutar(xs: Vector[Int]): Vector[Vector[Int]] =
+      if (xs.isEmpty) Vector(Vector())
+      else
+        xs.flatMap { elem =>
+          val resto = xs.filter(_ != elem)
+          permutar(resto).map(p => elem +: p)
+        }
+
+    // Paralelizamos la capa exterior
+    indices.par.flatMap { elem =>
+      val resto = indices.filter(_ != elem)
+      permutar(resto).map(p => elem +: p)
+    }.toVector
+  }
+
+  /** Programación de riego óptima paralela */
+  def ProgramacionRiegoOptimoPar(f: Finca, d: Distancia): (ProgRiego, Int) = {
+    // Generar permutaciones ya paralelizado
+    val programaciones = generarProgramacionesRiegoPar(f)
+
+    // Costo total usando funciones paralelas
+    def costoTotal(pi: ProgRiego): Int = {
+      val cr = costoRiegoFincaPar(f, pi)
+      val cm = costoMovilidadPar(f, pi, d)
+      cr + cm
+    }
+
+    // Buscar mínimo en paralelo
+    val mejor = programaciones.par.minBy(pi => costoTotal(pi))
+    val mejorCosto = costoTotal(mejor)
+
+    (mejor, mejorCosto)
+  }
 }
+
+
